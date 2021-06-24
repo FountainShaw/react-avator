@@ -19,23 +19,50 @@ function getRadius(index, mix) {
   return R * ratio;
 }
 
+// 十进制数精确到指定小数位
+function round(n, decimals = 0) {
+  let num = `${n}`.toLowerCase();
+  if (!num.includes('e')) num = `${n}e${decimals}`;
+  return Number(`${Math.round(num)}e-${decimals}`);
+}
+
+// 缓存各层圆弧的角度数据
+let arcCache;
+
 // 封装拆分的各个圆弧的相关数据
 function wrapArcData(radius) {
   const range = [...Array(8).keys()];
-  const data = radius.map(r => {
-    const outRingStart = range.map(item => ({
+
+  if (!arcCache) {
+    arcCache = range.map(item => ({
       x: Math.cos((Math.PI * item) / 4),
       y: Math.sin((Math.PI * item) / 4)
     }));
-    console.log(outRingStart);
+  }
+
+  const ringPoints = radius.map(r => {
+    return arcCache.map(item => ({
+      x: round(r * item.x, 4),
+      y: round(r * item.y, 4),
+      r
+    }));
   });
+
+  let index = ringPoints.length;
+  // while (index > 0) {}
+  const obj = {
+    path: `M0 0 L-100 0 A100 100 0 0 1 ${-100 * Math.SQRT1_2} ${-100 *
+      Math.SQRT1_2} Z`,
+    fill: '#ccc'
+  };
 }
 
 export default function Circle() {
   // 协同使用等面积与等半径情况下的半径的混合因子
   const [mix, setMix] = useState(0.42);
   const radius = areaArr.map((_, index) => getRadius(index, mix));
-  wrapArcData(radius);
+  const ringPoints = wrapArcData(radius);
+  console.log(ringPoints);
 
   return (
     <div style={{ padding: '30px' }}>

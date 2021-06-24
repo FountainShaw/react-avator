@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Slider } from 'antd';
+import sha256 from 'crypto-js/sha256';
 
 // 最外层圆的半径
 const R = 100;
@@ -26,11 +27,44 @@ function round(n, decimals = 0) {
   return Number(`${Math.round(num)}e-${decimals}`);
 }
 
+// 每个小块的svg绘制路径
+function drawBlock(block) {
+  const {
+    innerRingStartX,
+    innerRingStartY,
+    innerRingEndX,
+    innerRingEndY,
+    outterRingStartX,
+    outterRIngStartY,
+    outterRingEndX,
+    outterRingEndY,
+    innerRadius,
+    outterRadius
+  } = block;
+
+  const moveTo = (x, y) => `M ${x} ${y}`;
+  const lineTo = (x, y) => `L ${x} ${y}`;
+  const arcTo = (x, y, r, direction = '1') =>
+    `A ${r} ${r} 0 0 ${direction} ${x} ${y}`;
+
+  const isOrigin =
+    innerRingStartX === innerRingEndX && innerRingStartY === innerRingEndY;
+
+  return [
+    moveTo(innerRingStartX, innerRingStartY),
+    !isOrigin ? arcTo(innerRingEndX, innerRingEndY, innerRadius) : '',
+    lineTo(outterRingEndX, outterRingEndY),
+    arcTo(outterRingStartX, outterRIngStartY, outterRadius, '0'),
+    'Z'
+  ].join(' ');
+}
+
 // 缓存各层圆弧的角度数据
 let arcCache;
 
 // 封装拆分的各个圆弧的相关数据
-function wrapArcData(radius) {
+function wrapArcData(radius, hash) {
+  console.log(hash);
   const range = [...Array(8).keys()];
 
   if (!arcCache) {
@@ -40,29 +74,42 @@ function wrapArcData(radius) {
     }));
   }
 
-  const ringPoints = radius.map(r => {
-    return arcCache.map(item => ({
-      x: round(r * item.x, 4),
-      y: round(r * item.y, 4),
-      r
-    }));
+  const blockInfo = radius.map((r, i) => {
+    const innerRadius = i + 1 >= radius.length ? 0 : radius[i + 1];
+    return arcCache.map((item, index) => {
+      const nextIndex = index + 1 >= arcCache.length ? 0 : index + 1;
+      const outterNext = arcCache[nextIndex];
+      const block = {
+        innerRingStartX: round(innerRadius * item.x, 4),
+        innerRingStartY: round(innerRadius * item.y, 4),
+        innerRingEndX: round(innerRadius * outterNext.x, 4),
+        innerRingEndY: round(innerRadius * outterNext.y, 4),
+        outterRingStartX: round(r * item.x, 4),
+        outterRIngStartY: round(r * item.y, 4),
+        outterRingEndX: round(r * outterNext.x, 4),
+        outterRingEndY: round(r * outterNext.y, 4),
+        innerRadius,
+        outterRadius: r
+      };
+      return {
+        path: drawBlock(block),
+        fill: `hsl(${Math.floor(
+          (((block.outterRIngStartY + block.outterRingEndY) / 2 + 100) * 360) /
+            200
+        )}, ${60}%, ${60}%)`
+      };
+    });
   });
 
-  let index = ringPoints.length;
-  // while (index > 0) {}
-  const obj = {
-    path: `M0 0 L-100 0 A100 100 0 0 1 ${-100 * Math.SQRT1_2} ${-100 *
-      Math.SQRT1_2} Z`,
-    fill: '#ccc'
-  };
+  return blockInfo.flat();
 }
 
 export default function Circle() {
   // 协同使用等面积与等半径情况下的半径的混合因子
   const [mix, setMix] = useState(0.42);
   const radius = areaArr.map((_, index) => getRadius(index, mix));
-  const ringPoints = wrapArcData(radius);
-  console.log(ringPoints);
+  const hash = sha256('Message').toString();
+  const blockInfo = wrapArcData(radius, hash);
 
   return (
     <div style={{ padding: '30px' }}>
@@ -73,56 +120,15 @@ export default function Circle() {
         onChange={val => setMix(val / 100)}
       />
       <svg viewBox={`${-R} ${-R} ${2 * R} ${2 * R}`}>
-        {radius.map(r => (
-          <circle
-            key={r}
-            cx={0}
-            cy={0}
-            r={r}
-            fill={`hsl(${(r * 256) / 100}, ${60}%, ${60}%)`}
+        {blockInfo.map(item => (
+          <path
+            key={item.path}
+            d={item.path}
+            fill={item.fill}
+            stroke={'white'}
+            strokeWidth={'1'}
           />
         ))}
-        <line
-          x1={-R}
-          x2={R}
-          y1={0}
-          y2={0}
-          stroke={'#fff'}
-          strokeWidth={'0.1'}
-        />
-        <line
-          y1={-R}
-          y2={R}
-          x1={0}
-          x2={0}
-          stroke={'#fff'}
-          strokeWidth={'0.1'}
-        />
-        <line
-          x1={-R * Math.SQRT1_2}
-          x2={R * Math.SQRT1_2}
-          y1={-R * Math.SQRT1_2}
-          y2={R * Math.SQRT1_2}
-          stroke={'#fff'}
-          strokeWidth={'0.1'}
-        />
-        <line
-          x1={R * Math.SQRT1_2}
-          x2={-R * Math.SQRT1_2}
-          y1={-R * Math.SQRT1_2}
-          y2={R * Math.SQRT1_2}
-          stroke={'#fff'}
-          strokeWidth={'0.1'}
-        />
-      </svg>
-      <svg viewBox={`${-R} ${-R} ${2 * R} ${2 * R}`}>
-        <path
-          d={`M0 0 L-100 0 A100 100 0 0 1 ${-100 * Math.SQRT1_2} ${-100 *
-            Math.SQRT1_2} Z`}
-          stroke={'white'}
-          strokeWidth={'0.5'}
-          fill={'lime'}
-        />
       </svg>
     </div>
   );

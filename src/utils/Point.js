@@ -56,7 +56,7 @@ export default class Point {
   }
 
   // svg中绘制圆弧到某点，返回绘制路径
-  static arcTo(point, isClockwise = 0, radius = point.matrix, isLargeArc = 0) {
+  static arcTo(point, isClockwise = 0, isLargeArc = 0, radius = point.matrix) {
     return `
     A 
       ${radius} 

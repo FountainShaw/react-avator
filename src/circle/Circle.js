@@ -37,6 +37,7 @@ function drawBlock(
       ? Point.arcTo(
           iRingEnd,
           iRingSetting.direction,
+          iRingSetting.large,
           iRingEnd.matrix * iRingSetting.radius
         )
       : '',
@@ -44,6 +45,7 @@ function drawBlock(
     Point.arcTo(
       oRingStart,
       oRingSetting.direction,
+      oRingSetting.large,
       oRingEnd.matrix * oRingSetting.radius
     ),
     'Z'
@@ -137,14 +139,16 @@ export default function Circle() {
   const [disorder, setDisorder] = useState(0);
   const [user, setUser] = useState('Fountain Shaw');
   const [oRingSetting, setORingSetting] = useState({
-    radius: 1, // 圆环半径的倍数，取值为[1, 5]
-    direction: 0 // 圆环绘制方向，取值0或1
+    radius: 0.5, // 圆环半径的倍数，取值为(sin(PI/8), 0.5], [0.5, infinity)
+    direction: 0, // 圆环绘制方向，取值0或1
+    large: 0 // 圆环弧段大小，取值0或1
   });
   const [iRingSetting, setIRingSetting] = useState({
-    radius: 1, // 圆环半径的倍数，取值为[1, 5]
-    direction: 0 // 圆环绘制方向，取值0或1
+    radius: 0.5, // 圆环半径的倍数，取值为(0.3826, infinity)
+    direction: 0, // 圆环绘制方向，取值0或1
+    large: 0 // 圆环弧段大小，取值0或1
   });
-  const iRange = [-5, 5];
+  const iRange = [Math.sin(Math.PI / 8) + 0.1, 2];
   const mRange = [0, 100];
   const oRingRatio = mapTo(oRingSetting.radius, mRange, iRange);
   const iRingRatio = mapTo(iRingSetting.radius, mRange, iRange);
@@ -211,7 +215,7 @@ export default function Circle() {
         <span>外环绘制方向：</span>
         <Radio.Group
           name={'oRing'}
-          defaultValue={oRingSetting.direction}
+          value={oRingSetting.direction}
           onChange={e =>
             setORingSetting(
               Object.assign({}, oRingSetting, { direction: e.target.value })
@@ -226,9 +230,9 @@ export default function Circle() {
         <span>内环绘制方向：</span>
         <Radio.Group
           name={'iRing'}
-          defaultValue={iRingSetting.direction}
+          value={iRingSetting.direction}
           onChange={e =>
-            setORingSetting(
+            setIRingSetting(
               Object.assign({}, iRingSetting, { direction: e.target.value })
             )
           }
@@ -237,7 +241,37 @@ export default function Circle() {
           <Radio value={1}>逆时针</Radio>
         </Radio.Group>
       </div>
-      <svg viewBox={`${-1.5 * R} ${-1.5 * R} ${3 * R} ${3 * R}`}>
+      <div>
+        <span>外环弧段：</span>
+        <Radio.Group
+          name={'oRingL'}
+          value={oRingSetting.large}
+          onChange={e =>
+            setORingSetting(
+              Object.assign({}, oRingSetting, { large: e.target.value })
+            )
+          }
+        >
+          <Radio value={0}>小弧段</Radio>
+          <Radio value={1}>大弧段</Radio>
+        </Radio.Group>
+      </div>
+      <div>
+        <span>内环弧段：</span>
+        <Radio.Group
+          name={'iRingL'}
+          value={iRingSetting.large}
+          onChange={e =>
+            setIRingSetting(
+              Object.assign({}, iRingSetting, { large: e.target.value })
+            )
+          }
+        >
+          <Radio value={0}>小弧段</Radio>
+          <Radio value={1}>大弧段</Radio>
+        </Radio.Group>
+      </div>
+      <svg viewBox={`${-3 * R} ${-3 * R} ${6 * R} ${6 * R}`}>
         {blockInfo.map(item => (
           <path
             key={item.path}

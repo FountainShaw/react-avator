@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Input, Slider, Button } from 'antd';
+import React, { useState } from 'react';
+import { Input, Slider, Radio } from 'antd';
 import sha256 from 'crypto-js/sha256';
+import Point from '../utils/Point';
+import { range, mapTo } from '../utils/mathUtil';
 
 // 最外层圆的半径
 const R = 100;
@@ -8,11 +10,9 @@ const R = 100;
 const count = 4;
 
 // 等面积数组
-const areaArr = [...Array(count).keys()].map(
-  item => (count - item) ** 0.5 / count ** 0.5
-);
+const areaArr = range(count).map(item => (count - item) ** 0.5 / count ** 0.5);
 // 等半径数组
-const radiusArr = [...Array(count).keys()].map(item => (count - item) / count);
+const radiusArr = range(count).map(item => (count - item) / count);
 
 // 用于计算四层圆的各层半径
 function getRadius(index, mix) {
@@ -20,43 +20,65 @@ function getRadius(index, mix) {
   return R * ratio;
 }
 
-// 十进制数精确到指定小数位
-function round(n, decimals = 0) {
-  let num = `${n}`.toLowerCase();
-  if (!num.includes('e')) num = `${n}e${decimals}`;
-  return Number(`${Math.round(num)}e-${decimals}`);
-}
-
 // 每个小块的svg绘制路径
-function drawBlock(block) {
-  const {
-    innerRingStartX,
-    innerRingStartY,
-    innerRingEndX,
-    innerRingEndY,
-    outterRingStartX,
-    outterRIngStartY,
-    outterRingEndX,
-    outterRingEndY,
-    innerRadius,
-    outterRadius
-  } = block;
-
-  const moveTo = (x, y) => `M ${x} ${y}`;
-  const lineTo = (x, y) => `L ${x} ${y}`;
-  const arcTo = (x, y, r, direction = '1') =>
-    `A ${r} ${r} 0 0 ${direction} ${x} ${y}`;
-
-  const isOrigin =
-    innerRingStartX === innerRingEndX && innerRingStartY === innerRingEndY;
+function drawBlock(
+  iRingStart,
+  iRingEnd,
+  oRingStart,
+  oRingEnd,
+  oRingSetting,
+  iRingSetting
+) {
+  const isOrigin = iRingStart.equal(iRingEnd);
 
   return [
-    moveTo(innerRingStartX, innerRingStartY),
-    !isOrigin ? arcTo(innerRingEndX, innerRingEndY, innerRadius) : '',
-    lineTo(outterRingEndX, outterRingEndY),
-    arcTo(outterRingStartX, outterRIngStartY, outterRadius, '0'),
+    Point.moveTo(iRingStart),
+    !isOrigin
+      ? Point.arcTo(
+          iRingEnd,
+          iRingSetting.direction,
+          iRingEnd.matrix * iRingSetting.radius
+        )
+      : '',
+    Point.lineTo(oRingEnd),
+    Point.arcTo(
+      oRingStart,
+      oRingSetting.direction,
+      oRingEnd.matrix * oRingSetting.radius
+    ),
     'Z'
   ].join(' ');
+}
+
+// 获取每个小块的绘制路径
+function getBlocksPath(radius, disorder, oRingSetting, iRingSetting) {
+  const blockInfo = radius.map((outterRadius, i) => {
+    const innerRadius = i + 1 >= radius.length ? 0 : radius[i + 1];
+    const arcCache = range(8).map(j => {
+      const theta = (Math.PI * (j + i * disorder * 4)) / 4;
+      return new Point(1, theta, true);
+    });
+
+    return arcCache.map((item, index) => {
+      const nextIndex = index + 1 >= arcCache.length ? 0 : index + 1;
+      const next = arcCache[nextIndex];
+
+      const iRingStart = item.scale(innerRadius);
+      const iRingEnd = next.scale(innerRadius);
+      const oRingStart = item.scale(outterRadius);
+      const oRingEnd = next.scale(outterRadius);
+      return drawBlock(
+        iRingStart,
+        iRingEnd,
+        oRingStart,
+        oRingEnd,
+        oRingSetting,
+        iRingSetting
+      );
+    });
+  });
+
+  return blockInfo.flat();
 }
 
 // 获取各个小块的hsl值
@@ -65,7 +87,7 @@ function getHsl(hash) {
   const hashSplice = len => {
     let temp = hash;
     const spliceLength = temp.length / len;
-    return [...Array(len).keys()].map(item =>
+    return range(len).map(item =>
       temp.slice(item * spliceLength, (item + 1) * spliceLength)
     );
   };
@@ -76,59 +98,37 @@ function getHsl(hash) {
   const blocksNum = blocks.map(item => parseInt(item, 16));
   const oxReducer = (acc, cur) => cur ^ acc;
 
-  const hashFeature = (blocksNum.reduce(oxReducer, 0) * 100) / 255;
+  const hashFeature = mapTo(
+    blocksNum.reduce(oxReducer, 0),
+    [0, 100],
+    [0, 0xff]
+  );
   const ringsFeature = rings.map((_, i) => {
     const temp = blocksNum.slice(i * 8, (i + 1) * 8);
-    return (temp.reduce(oxReducer, 0) * 250) / 255;
+    return mapTo(temp.reduce(oxReducer, 0), [0, 250], [0, 0xff]);
   });
-  const blocksFeature = blocksNum.map(item => (item * 10) / 255);
+  const blocksFeature = blocksNum.map(item => mapTo(item, [0, 10], [0, 0xff]));
 
   // 3.通过特征数据计算出各个块hsl的值
   return blocksFeature.map((item, index) => {
     const ringIndex = Math.floor(index / 8);
     const hue = Math.floor(hashFeature + ringsFeature[ringIndex] + item);
-    const saturation = (blocksNum[index] * 60) / 255 + 40;
-    const lightness = (blocksNum[index] * 70) / 255 + 30;
+    const saturation = mapTo(blocksNum[index], [40, 60], [0, 0xff]);
+    const lightness = mapTo(blocksNum[index], [30, 70], [0, 0xff]);
 
     return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   });
 }
 
 // 封装拆分的各个圆弧的相关数据
-function wrapArcData(radius, hash, disorder = 0) {
+function wrapArcData(radius, hash, disorder, oRingSetting, iRingSetting) {
   const hsl = getHsl(hash);
-  const range = [...Array(8).keys()];
+  const blocks = getBlocksPath(radius, disorder, oRingSetting, iRingSetting);
 
-  const blockInfo = radius.map((r, i) => {
-    const innerRadius = i + 1 >= radius.length ? 0 : radius[i + 1];
-    const arcCache = range.map(j => ({
-      x: Math.cos((Math.PI * (j + i * disorder)) / 4),
-      y: Math.sin((Math.PI * (j + i * disorder)) / 4)
-    }));
-
-    return arcCache.map((item, index) => {
-      const nextIndex = index + 1 >= arcCache.length ? 0 : index + 1;
-      const outterNext = arcCache[nextIndex];
-      const block = {
-        innerRingStartX: round(innerRadius * item.x, 4),
-        innerRingStartY: round(innerRadius * item.y, 4),
-        innerRingEndX: round(innerRadius * outterNext.x, 4),
-        innerRingEndY: round(innerRadius * outterNext.y, 4),
-        outterRingStartX: round(r * item.x, 4),
-        outterRIngStartY: round(r * item.y, 4),
-        outterRingEndX: round(r * outterNext.x, 4),
-        outterRingEndY: round(r * outterNext.y, 4),
-        innerRadius,
-        outterRadius: r
-      };
-      return {
-        path: drawBlock(block),
-        fill: hsl[i * 8 + index]
-      };
-    });
-  });
-
-  return blockInfo.flat();
+  return blocks.map((item, index) => ({
+    path: item,
+    fill: hsl[index]
+  }));
 }
 
 export default function Circle() {
@@ -136,15 +136,25 @@ export default function Circle() {
   const [mix, setMix] = useState(0.42);
   const [disorder, setDisorder] = useState(0);
   const [user, setUser] = useState('Fountain Shaw');
-  const [blockInfo, setBlockInfo] = useState([]);
+  const [oRingSetting, setORingSetting] = useState({
+    radius: 1, // 圆环半径的倍数，取值为[1, 5]
+    direction: 0 // 圆环绘制方向，取值0或1
+  });
+  const [iRingSetting, setIRingSetting] = useState({
+    radius: 1, // 圆环半径的倍数，取值为[1, 5]
+    direction: 0 // 圆环绘制方向，取值0或1
+  });
+  const iRange = [-5, 5];
+  const mRange = [0, 100];
+  const oRingRatio = mapTo(oRingSetting.radius, mRange, iRange);
+  const iRingRatio = mapTo(iRingSetting.radius, mRange, iRange);
 
   const radius = areaArr.map((_, index) => getRadius(index, mix));
   const generatArcData = () => {
     const hash = sha256(user).toString();
-    setBlockInfo(wrapArcData(radius, hash, disorder));
+    return wrapArcData(radius, hash, disorder, oRingSetting, iRingSetting);
   };
-
-  useEffect(generatArcData, [disorder, mix]);
+  const blockInfo = generatArcData();
 
   return (
     <div style={{ padding: '50px' }}>
@@ -156,14 +166,6 @@ export default function Circle() {
           onChange={e => setUser(e.target.value)}
           onPressEnter={generatArcData}
         />
-        <Button
-          style={{ marginLeft: '10px' }}
-          type="primary"
-          size={'small'}
-          onClick={generatArcData}
-        >
-          确认
-        </Button>
       </div>
       <Slider
         value={mix * 100}
@@ -177,7 +179,65 @@ export default function Circle() {
         marks={{ [disorder * 100]: `旋转因子：${Math.floor(disorder * 100)}%` }}
         onChange={val => setDisorder(val / 100)}
       />
-      <svg viewBox={`${-R} ${-R} ${2 * R} ${2 * R}`}>
+      <Slider
+        value={oRingRatio}
+        tooltipVisible={false}
+        marks={{
+          [oRingRatio]: `外环半径比例：${Math.floor(oRingRatio)}%`
+        }}
+        onChange={val =>
+          setORingSetting(
+            Object.assign({}, oRingSetting, {
+              radius: mapTo(val, iRange, mRange)
+            })
+          )
+        }
+      />
+      <Slider
+        value={iRingRatio}
+        tooltipVisible={false}
+        marks={{
+          [iRingRatio]: `内环半径比例${Math.floor(iRingRatio)}%`
+        }}
+        onChange={val =>
+          setIRingSetting(
+            Object.assign({}, iRingSetting, {
+              radius: mapTo(val, iRange, mRange)
+            })
+          )
+        }
+      />
+      <div>
+        <span>外环绘制方向：</span>
+        <Radio.Group
+          name={'oRing'}
+          defaultValue={oRingSetting.direction}
+          onChange={e =>
+            setORingSetting(
+              Object.assign({}, oRingSetting, { direction: e.target.value })
+            )
+          }
+        >
+          <Radio value={0}>顺时针</Radio>
+          <Radio value={1}>逆时针</Radio>
+        </Radio.Group>
+      </div>
+      <div>
+        <span>内环绘制方向：</span>
+        <Radio.Group
+          name={'iRing'}
+          defaultValue={iRingSetting.direction}
+          onChange={e =>
+            setORingSetting(
+              Object.assign({}, iRingSetting, { direction: e.target.value })
+            )
+          }
+        >
+          <Radio value={0}>顺时针</Radio>
+          <Radio value={1}>逆时针</Radio>
+        </Radio.Group>
+      </div>
+      <svg viewBox={`${-1.5 * R} ${-1.5 * R} ${3 * R} ${3 * R}`}>
         {blockInfo.map(item => (
           <path
             key={item.path}

@@ -133,6 +133,9 @@ function wrapArcData(radius, hash, disorder, oRingSetting, iRingSetting) {
   }));
 }
 
+const iRange = [Math.sin(Math.PI / 8), 2];
+const mRange = [0, 100];
+
 export default function Circle() {
   // 协同使用等面积与等半径情况下的半径的混合因子
   const [mix, setMix] = useState(0.42);
@@ -148,17 +151,19 @@ export default function Circle() {
     direction: 0, // 圆环绘制方向，取值0或1
     large: 0 // 圆环弧段大小，取值0或1
   });
-  const iRange = [Math.sin(Math.PI / 8), 2];
-  const mRange = [0, 100];
+
   const oRingRatio = mapTo(oRingSetting.radius, mRange, iRange);
   const iRingRatio = mapTo(iRingSetting.radius, mRange, iRange);
 
   const radius = areaArr.map((_, index) => getRadius(index, mix));
-  const generatArcData = () => {
-    const hash = sha256(user).toString();
-    return wrapArcData(radius, hash, disorder, oRingSetting, iRingSetting);
-  };
-  const blockInfo = generatArcData();
+  const hash = sha256(user).toString();
+  const blockInfo = wrapArcData(
+    radius,
+    hash,
+    disorder,
+    oRingSetting,
+    iRingSetting
+  );
 
   return (
     <div style={{ padding: '0 50px' }}>
@@ -168,7 +173,6 @@ export default function Circle() {
           style={{ flex: 4 }}
           value={user}
           onChange={e => setUser(e.target.value)}
-          onPressEnter={generatArcData}
         />
       </div>
       <Slider

@@ -162,7 +162,7 @@ export default function Circle() {
 
   return (
     <div style={{ padding: '50px' }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', height: '50px' }}>
         <span>用户名：</span>
         <Input
           style={{ flex: 4 }}
@@ -172,18 +172,21 @@ export default function Circle() {
         />
       </div>
       <Slider
+        style={{ height: '25px' }}
         value={mix * 100}
         tooltipVisible={false}
         marks={{ [mix * 100]: `尺寸因子：${Math.floor(mix * 100)}%` }}
         onChange={val => setMix(val / 100)}
       />
       <Slider
+        style={{ height: '25px' }}
         value={disorder * 100}
         tooltipVisible={false}
         marks={{ [disorder * 100]: `旋转因子：${Math.floor(disorder * 100)}%` }}
         onChange={val => setDisorder(val / 100)}
       />
       <Slider
+        style={{ height: '25px' }}
         value={oRingRatio}
         tooltipVisible={false}
         marks={{
@@ -198,6 +201,7 @@ export default function Circle() {
         }
       />
       <Slider
+        style={{ height: '25px' }}
         value={iRingRatio}
         tooltipVisible={false}
         marks={{
@@ -211,67 +215,71 @@ export default function Circle() {
           )
         }
       />
-      <div>
-        <span>外环绘制方向：</span>
-        <Radio.Group
-          name={'oRing'}
-          value={oRingSetting.direction}
-          onChange={e =>
-            setORingSetting(
-              Object.assign({}, oRingSetting, { direction: e.target.value })
-            )
-          }
-        >
-          <Radio value={0}>顺时针</Radio>
-          <Radio value={1}>逆时针</Radio>
-        </Radio.Group>
+      <div style={{ display: 'flex', height: '50px' }}>
+        <div style={{ flex: 1 }}>
+          <span>外环绘制方向：</span>
+          <Radio.Group
+            name={'oRing'}
+            value={oRingSetting.direction}
+            onChange={e =>
+              setORingSetting(
+                Object.assign({}, oRingSetting, { direction: e.target.value })
+              )
+            }
+          >
+            <Radio value={0}>顺时针</Radio>
+            <Radio value={1}>逆时针</Radio>
+          </Radio.Group>
+        </div>
+        <div style={{ flex: 1 }}>
+          <span>内环绘制方向：</span>
+          <Radio.Group
+            name={'iRing'}
+            value={iRingSetting.direction}
+            onChange={e =>
+              setIRingSetting(
+                Object.assign({}, iRingSetting, { direction: e.target.value })
+              )
+            }
+          >
+            <Radio value={0}>顺时针</Radio>
+            <Radio value={1}>逆时针</Radio>
+          </Radio.Group>
+        </div>
       </div>
-      <div>
-        <span>内环绘制方向：</span>
-        <Radio.Group
-          name={'iRing'}
-          value={iRingSetting.direction}
-          onChange={e =>
-            setIRingSetting(
-              Object.assign({}, iRingSetting, { direction: e.target.value })
-            )
-          }
-        >
-          <Radio value={0}>顺时针</Radio>
-          <Radio value={1}>逆时针</Radio>
-        </Radio.Group>
+      <div style={{ display: 'flex', height: '50px' }}>
+        <div style={{ flex: 1 }}>
+          <span>外环弧段：</span>
+          <Radio.Group
+            name={'oRingL'}
+            value={oRingSetting.large}
+            onChange={e =>
+              setORingSetting(
+                Object.assign({}, oRingSetting, { large: e.target.value })
+              )
+            }
+          >
+            <Radio value={0}>小弧段</Radio>
+            <Radio value={1}>大弧段</Radio>
+          </Radio.Group>
+        </div>
+        <div style={{ flex: 1 }}>
+          <span>内环弧段：</span>
+          <Radio.Group
+            name={'iRingL'}
+            value={iRingSetting.large}
+            onChange={e =>
+              setIRingSetting(
+                Object.assign({}, iRingSetting, { large: e.target.value })
+              )
+            }
+          >
+            <Radio value={0}>小弧段</Radio>
+            <Radio value={1}>大弧段</Radio>
+          </Radio.Group>
+        </div>
       </div>
-      <div>
-        <span>外环弧段：</span>
-        <Radio.Group
-          name={'oRingL'}
-          value={oRingSetting.large}
-          onChange={e =>
-            setORingSetting(
-              Object.assign({}, oRingSetting, { large: e.target.value })
-            )
-          }
-        >
-          <Radio value={0}>小弧段</Radio>
-          <Radio value={1}>大弧段</Radio>
-        </Radio.Group>
-      </div>
-      <div>
-        <span>内环弧段：</span>
-        <Radio.Group
-          name={'iRingL'}
-          value={iRingSetting.large}
-          onChange={e =>
-            setIRingSetting(
-              Object.assign({}, iRingSetting, { large: e.target.value })
-            )
-          }
-        >
-          <Radio value={0}>小弧段</Radio>
-          <Radio value={1}>大弧段</Radio>
-        </Radio.Group>
-      </div>
-      <svg viewBox={`${-3 * R} ${-3 * R} ${6 * R} ${6 * R}`}>
+      <svg viewBox={`${-1.5 * R} ${-1.5 * R} ${3 * R} ${3 * R}`}>
         {blockInfo.map(item => (
           <path
             key={item.path}

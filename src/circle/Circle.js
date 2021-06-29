@@ -139,16 +139,16 @@ export default function Circle() {
   const [disorder, setDisorder] = useState(0);
   const [user, setUser] = useState('Fountain Shaw');
   const [oRingSetting, setORingSetting] = useState({
-    radius: 0.5, // 圆环半径的倍数，取值为(sin(PI/8), 0.5], [0.5, infinity)
+    radius: 1, // 圆环半径的倍数，取值为(sin(PI/8), 1], [1, infinity)
     direction: 0, // 圆环绘制方向，取值0或1
     large: 0 // 圆环弧段大小，取值0或1
   });
   const [iRingSetting, setIRingSetting] = useState({
-    radius: 0.5, // 圆环半径的倍数，取值为(0.3826, infinity)
+    radius: 1, // 圆环半径的倍数，取值为(0.3826, infinity)
     direction: 0, // 圆环绘制方向，取值0或1
     large: 0 // 圆环弧段大小，取值0或1
   });
-  const iRange = [Math.sin(Math.PI / 8) + 0.1, 2];
+  const iRange = [Math.sin(Math.PI / 8), 2];
   const mRange = [0, 100];
   const oRingRatio = mapTo(oRingSetting.radius, mRange, iRange);
   const iRingRatio = mapTo(iRingSetting.radius, mRange, iRange);

@@ -161,7 +161,7 @@ export default function Circle() {
   const blockInfo = generatArcData();
 
   return (
-    <div style={{ padding: '50px' }}>
+    <div style={{ padding: '0 50px' }}>
       <div style={{ display: 'flex', alignItems: 'center', height: '50px' }}>
         <span>用户名：</span>
         <Input
@@ -172,21 +172,21 @@ export default function Circle() {
         />
       </div>
       <Slider
-        style={{ height: '25px' }}
+        style={{ height: '20px' }}
         value={mix * 100}
         tooltipVisible={false}
         marks={{ [mix * 100]: `尺寸因子：${Math.floor(mix * 100)}%` }}
         onChange={val => setMix(val / 100)}
       />
       <Slider
-        style={{ height: '25px' }}
+        style={{ height: '20px' }}
         value={disorder * 100}
         tooltipVisible={false}
         marks={{ [disorder * 100]: `旋转因子：${Math.floor(disorder * 100)}%` }}
         onChange={val => setDisorder(val / 100)}
       />
       <Slider
-        style={{ height: '25px' }}
+        style={{ height: '20px' }}
         value={oRingRatio}
         tooltipVisible={false}
         marks={{
@@ -201,7 +201,7 @@ export default function Circle() {
         }
       />
       <Slider
-        style={{ height: '25px' }}
+        style={{ height: '20px' }}
         value={iRingRatio}
         tooltipVisible={false}
         marks={{
